@@ -7,22 +7,13 @@ export async function GET() {
 
     const data = await res.json();
 
-    const skins = data
-      .map(item => item.market_hash_name)
-      .filter(Boolean);
+    const skins = data.map(item => ({
+      name: item.market_hash_name || item.name,
+      image: item.image
+    })).filter(item => item.name && item.image);
 
     return Response.json({ skins });
-  } catch (err) {
-    // 🔥 fallback если API умер
-    return Response.json({
-      skins: [
-        "AK-47 | Vulcan",
-        "AK-47 | Redline",
-        "AK-47 | Asiimov",
-        "AWP | Asiimov",
-        "M4A4 | Howl",
-        "M4A1-S | Printstream"
-      ]
-    });
+  } catch {
+    return Response.json({ skins: [] });
   }
 }
