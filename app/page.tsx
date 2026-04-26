@@ -4,7 +4,6 @@ import { useState } from "react";
 
 type Skin = {
   name: string;
-  image: string;
 };
 
 type PriceItem = {
@@ -16,16 +15,15 @@ type PriceItem = {
 };
 
 const fallbackSkins: Skin[] = [
-  { name: "AK-47 | Vulcan", image: "" },
-  { name: "AK-47 | Wild Lotus", image: "" },
-  { name: "AK-47 | Redline", image: "" },
-  { name: "AK-47 | Asiimov", image: "" },
-  { name: "AK-47 | Fire Serpent", image: "" },
-  { name: "AWP | Dragon Lore", image: "" },
-  { name: "AWP | Asiimov", image: "" },
-  { name: "M4A4 | Howl", image: "" },
-  { name: "M4A1-S | Printstream", image: "" },
-  { name: "Desert Eagle | Blaze", image: "" }
+  { name: "AK-47 | Vulcan" },
+  { name: "AK-47 | Wild Lotus" },
+  { name: "AK-47 | Redline" },
+  { name: "AK-47 | Asiimov" },
+  { name: "M4A4 | Howl" },
+  { name: "AWP | Dragon Lore" },
+  { name: "AWP | Asiimov" },
+  { name: "M4A1-S | Printstream" },
+  { name: "Desert Eagle | Blaze" }
 ];
 
 export default function Home() {
@@ -49,7 +47,12 @@ export default function Home() {
       const res = await fetch("/api/skins");
       const data = await res.json();
 
-      const apiSkins: Skin[] = Array.isArray(data.skins) ? data.skins : [];
+      const apiSkins: Skin[] = Array.isArray(data.skins)
+        ? data.skins.map((item: any) => ({
+            name: typeof item === "string" ? item : item.name
+          })).filter((item: Skin) => item.name)
+        : [];
+
       const merged = [...fallbackSkins, ...apiSkins];
 
       setAllSkins(merged);
@@ -68,11 +71,7 @@ export default function Home() {
     }
 
     const q = query.toLowerCase().trim();
-
-    if (!q) {
-      setFiltered([]);
-      return;
-    }
+    if (!q) return;
 
     const words = q.split(" ").filter(Boolean);
 
@@ -115,9 +114,7 @@ export default function Home() {
         let steamRub = "—";
 
         if (priceRaw) {
-          const num = parseFloat(
-            priceRaw.replace("$", "").replace(",", "").trim()
-          );
+          const num = parseFloat(priceRaw.replace("$", "").replace(",", "").trim());
           steamRub = `${Math.round(num * usdToRub)} ₽`;
         }
 
@@ -153,9 +150,7 @@ export default function Home() {
     }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <h1 style={{ fontSize: 38, marginBottom: 8 }}>CS2 Price Monitor</h1>
-        <p style={{ color: "#aaa", marginBottom: 24 }}>
-          Поиск цен на скины CS2
-        </p>
+        <p style={{ color: "#aaa", marginBottom: 24 }}>Поиск цен на скины CS2</p>
 
         <div style={{
           background: "#111",
@@ -167,9 +162,7 @@ export default function Home() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") searchSkins();
-              }}
+              onKeyDown={(e) => e.key === "Enter" && searchSkins()}
               placeholder="vulcan, lotus, redline"
               style={{
                 flex: 1,
@@ -196,68 +189,40 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{
-            marginTop: 22,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
-            gap: 12
-          }}>
+          <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
             {filtered.map((skin, i) => (
               <button
                 key={i}
                 onClick={() => fetchPrices(skin)}
                 style={{
+                  textAlign: "left",
                   background: "#181818",
                   border: "1px solid #2a2a2a",
-                  borderRadius: 16,
-                  padding: 12,
+                  borderRadius: 14,
+                  padding: 16,
                   color: "white",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  fontWeight: "bold"
                 }}
               >
-                {skin.image ? (
-                  <img
-                    src={skin.image}
-                    alt={skin.name}
-                    style={{
-                      width: "100%",
-                      height: 120,
-                      objectFit: "contain"
-                    }}
-                  />
-                ) : (
-                  <div style={{
-                    height: 120,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#777"
-                  }}>
-                    CS2 SKIN
-                  </div>
-                )}
-
-                <div style={{ fontWeight: "bold", marginTop: 8 }}>
-                  {skin.name}
-                </div>
+                {skin.name}
               </button>
             ))}
           </div>
 
           {selectedSkin && (
-            <div style={{ marginTop: 24 }}>
-              <h2>{selectedSkin.name}</h2>
-              {selectedSkin.image && (
-                <img
-                  src={selectedSkin.image}
-                  alt={selectedSkin.name}
-                  style={{ width: 220 }}
-                />
-              )}
+            <div style={{
+              marginTop: 24,
+              padding: 16,
+              background: "#101c15",
+              border: "1px solid #1f5133",
+              borderRadius: 16
+            }}>
+              Выбран скин: <b>{selectedSkin.name}</b>
             </div>
           )}
 
-          {loading && <p>Загружаю цены...</p>}
+          {loading && <p style={{ color: "#aaa" }}>Загружаю цены...</p>}
 
           <div style={{ marginTop: 20 }}>
             {results.map((item, i) => (
