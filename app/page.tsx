@@ -15,6 +15,19 @@ type PriceItem = {
   linkLis: string;
 };
 
+const fallbackSkins: Skin[] = [
+  { name: "AK-47 | Vulcan", image: "" },
+  { name: "AK-47 | Wild Lotus", image: "" },
+  { name: "AK-47 | Redline", image: "" },
+  { name: "AK-47 | Asiimov", image: "" },
+  { name: "AK-47 | Fire Serpent", image: "" },
+  { name: "AWP | Dragon Lore", image: "" },
+  { name: "AWP | Asiimov", image: "" },
+  { name: "M4A4 | Howl", image: "" },
+  { name: "M4A1-S | Printstream", image: "" },
+  { name: "Desert Eagle | Blaze", image: "" }
+];
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [allSkins, setAllSkins] = useState<Skin[]>([]);
@@ -32,11 +45,19 @@ export default function Home() {
   ];
 
   const loadSkins = async () => {
-    const res = await fetch("/api/skins");
-    const data = await res.json();
-    const skins: Skin[] = data.skins || [];
-    setAllSkins(skins);
-    return skins;
+    try {
+      const res = await fetch("/api/skins");
+      const data = await res.json();
+
+      const apiSkins: Skin[] = Array.isArray(data.skins) ? data.skins : [];
+      const merged = [...fallbackSkins, ...apiSkins];
+
+      setAllSkins(merged);
+      return merged;
+    } catch {
+      setAllSkins(fallbackSkins);
+      return fallbackSkins;
+    }
   };
 
   const searchSkins = async () => {
@@ -47,14 +68,19 @@ export default function Home() {
     }
 
     const q = query.toLowerCase().trim();
-    if (!q) return;
+
+    if (!q) {
+      setFiltered([]);
+      return;
+    }
 
     const words = q.split(" ").filter(Boolean);
 
     const found = skins
-      .filter((skin) =>
-        words.every((word) => skin.name.toLowerCase().includes(word))
-      )
+      .filter((skin) => {
+        const name = skin.name.toLowerCase();
+        return words.every((word) => name.includes(word));
+      })
       .slice(0, 30);
 
     setFiltered(found);
@@ -89,7 +115,9 @@ export default function Home() {
         let steamRub = "—";
 
         if (priceRaw) {
-          const num = parseFloat(priceRaw.replace("$", "").replace(",", "").trim());
+          const num = parseFloat(
+            priceRaw.replace("$", "").replace(",", "").trim()
+          );
           steamRub = `${Math.round(num * usdToRub)} ₽`;
         }
 
@@ -124,7 +152,10 @@ export default function Home() {
       padding: "36px 16px"
     }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 38 }}>CS2 Price Monitor</h1>
+        <h1 style={{ fontSize: 38, marginBottom: 8 }}>CS2 Price Monitor</h1>
+        <p style={{ color: "#aaa", marginBottom: 24 }}>
+          Поиск цен на скины CS2
+        </p>
 
         <div style={{
           background: "#111",
@@ -149,13 +180,18 @@ export default function Home() {
                 border: "1px solid #333"
               }}
             />
-            <button onClick={searchSkins} style={{
-              padding: "14px 22px",
-              borderRadius: 12,
-              border: "none",
-              background: "#4ade80",
-              fontWeight: "bold"
-            }}>
+
+            <button
+              onClick={searchSkins}
+              style={{
+                padding: "14px 22px",
+                borderRadius: 12,
+                border: "none",
+                background: "#4ade80",
+                fontWeight: "bold",
+                cursor: "pointer"
+              }}
+            >
               Поиск
             </button>
           </div>
@@ -190,9 +226,20 @@ export default function Home() {
                     }}
                   />
                 ) : (
-                  <div style={{ height: 120, color: "#777" }}>Нет картинки</div>
+                  <div style={{
+                    height: 120,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#777"
+                  }}>
+                    CS2 SKIN
+                  </div>
                 )}
-                <div style={{ fontWeight: "bold" }}>{skin.name}</div>
+
+                <div style={{ fontWeight: "bold", marginTop: 8 }}>
+                  {skin.name}
+                </div>
               </button>
             ))}
           </div>
@@ -201,7 +248,11 @@ export default function Home() {
             <div style={{ marginTop: 24 }}>
               <h2>{selectedSkin.name}</h2>
               {selectedSkin.image && (
-                <img src={selectedSkin.image} alt={selectedSkin.name} style={{ width: 220 }} />
+                <img
+                  src={selectedSkin.image}
+                  alt={selectedSkin.name}
+                  style={{ width: 220 }}
+                />
               )}
             </div>
           )}
@@ -218,6 +269,7 @@ export default function Home() {
               }}>
                 <b>{item.condition}</b>
                 <div>Steam: {item.steamPrice} ({item.steamRub})</div>
+
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                   <a href={item.linkSteam} target="_blank">Steam</a>
                   <a href={item.linkLis} target="_blank">Lis-Skins</a>
