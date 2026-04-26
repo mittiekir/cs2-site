@@ -4,10 +4,11 @@ import { useState } from "react";
 
 type PriceItem = {
   condition: string;
-  price: string;
-  priceNum: number;
-  steamLink: string;
-  lisLink: string;
+  steamPrice: string;
+  steamRub: string;
+  skinportPrice: string;
+  linkSteam: string;
+  linkLis: string;
 };
 
 export default function Home() {
@@ -22,37 +23,74 @@ export default function Home() {
     "Battle-Scarred"
   ];
 
-  const fetchPrices = async (skinName: string) => {
+  const fetchPrices = async () => {
+    if (!query) return;
+
+    let usdToRub = 90;
+
+    // 🔥 получаем актуальный курс
+    try {
+      const rateRes = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+      const rateData = await rateRes.json();
+      usdToRub = rateData.rates.RUB;
+    } catch {
+      console.log("курс не загрузился");
+    }
+
     const items: PriceItem[] = [];
 
     for (const cond of conditions) {
-      const fullName = `${skinName} (${cond})`;
+      const fullName = `${query} (${cond})`;
 
       try {
-        const res = await fetch(`/api/price?name=${encodeURIComponent(fullName)}`);
-        const data = await res.json();
+        const resSteam = await fetch(`/api/price?name=${encodeURIComponent(fullName)}`);
+        const dataSteam = await resSteam.json();
 
-        const priceRaw = data.lowest_price || data.median_price;
+        const steamRaw = dataSteam.lowest_price || dataSteam.median_price;
+
+        let steamRub = "—";
+
+        if (steamRaw) {
+          const num = parseFloat(steamRaw.replace("$", ""));
+          steamRub = `${Math.round(num * usdToRub)} ₽`;
+        }
+
+        // Skinport
+        let skinportPrice = "—";
+
+        try {
+          const resSkinport = await fetch(
+            `https://api.skinport.com/v1/items?app_id=730&market_hash_name=${encodeURIComponent(fullName)}`
+          );
+          const dataSkinport = await resSkinport.json();
+
+          if (dataSkinport && dataSkinport.length > 0) {
+            const price = dataSkinport[0].min_price / 100;
+            skinportPrice = `${price.toFixed(2)}$`;
+          }
+        } catch {}
 
         items.push({
           condition: cond,
-          price: priceRaw || "нет данных",
-          priceNum: priceRaw ? parseFloat(priceRaw.replace("$", "")) : Infinity,
-          steamLink: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`,
-          lisLink: `https://lis-skins.com/ru/market/csgo/?q=${encodeURIComponent(fullName)}`
+          steamPrice: steamRaw || "нет данных",
+          steamRub,
+          skinportPrice,
+          linkSteam: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`,
+          linkLis: `https://lis-skins.com/ru/market/csgo/?q=${encodeURIComponent(fullName)}`
         });
+
       } catch {
         items.push({
           condition: cond,
-          price: "ошибка",
-          priceNum: Infinity,
-          steamLink: "#",
-          lisLink: "#"
+          steamPrice: "ошибка",
+          steamRub: "—",
+          skinportPrice: "—",
+          linkSteam: "#",
+          linkLis: "#"
         });
       }
     }
 
-    items.sort((a, b) => a.priceNum - b.priceNum);
     setResults(items);
   };
 
@@ -66,17 +104,18 @@ export default function Home() {
       color: "white",
       fontFamily: "Arial"
     }}>
-      <div style={{ width: "520px", background: "#111", padding: "20px", borderRadius: "12px" }}>
+      <div style={{ width: "540px", background: "#111", padding: "20px", borderRadius: "12px" }}>
+        
         <h1>CS2 Price Monitor</h1>
 
         <input
-          placeholder="например: AK-47 | Vulcan"
+          placeholder="AK-47 | Vulcan"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
         />
 
-        <button onClick={() => fetchPrices(query)}>Найти</button>
+        <button onClick={fetchPrices}>Найти</button>
 
         <div style={{ marginTop: 20 }}>
           {results.map((item, i) => (
@@ -88,16 +127,21 @@ export default function Home() {
             }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{item.condition}</span>
-                <span>{item.price}</span>
+              </div>
+
+              <div style={{ marginTop: 5 }}>
+                <div>Steam: {item.steamPrice} ({item.steamRub})</div>
+                <div>Skinport: {item.skinportPrice}</div>
               </div>
 
               <div style={{ marginTop: 5, display: "flex", gap: 10 }}>
-                <a href={item.steamLink} target="_blank">Steam</a>
-                <a href={item.lisLink} target="_blank">Lis-Skins</a>
+                <a href={item.linkSteam} target="_blank">Steam</a>
+                <a href={item.linkLis} target="_blank">Lis-Skins</a>
               </div>
             </div>
           ))}
         </div>
+
       </div>
     </main>
   );
