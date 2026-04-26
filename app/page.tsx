@@ -9,6 +9,20 @@ type PriceItem = {
   link: string;
 };
 
+const extraSkins = [
+  "AK-47 | Wild Lotus",
+  "AK-47 | Vulcan",
+  "AK-47 | Fire Serpent",
+  "AK-47 | Gold Arabesque",
+  "AK-47 | Case Hardened",
+  "M4A4 | Howl",
+  "M4A1-S | Welcome to the Jungle",
+  "AWP | Dragon Lore",
+  "AWP | Gungnir",
+  "AWP | Medusa",
+  "Desert Eagle | Blaze"
+];
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [allSkins, setAllSkins] = useState<string[]>([]);
@@ -28,11 +42,14 @@ export default function Home() {
       const res = await fetch("/api/skins");
       const data = await res.json();
 
-      const skins: string[] = data.skins || [];
-      setAllSkins(skins);
-      return skins;
+      const apiSkins: string[] = data.skins || [];
+      const merged = Array.from(new Set([...extraSkins, ...apiSkins]));
+
+      setAllSkins(merged);
+      return merged;
     } catch {
-      return [];
+      setAllSkins(extraSkins);
+      return extraSkins;
     }
   };
 
@@ -47,7 +64,7 @@ export default function Home() {
 
     const res = skins
       .filter((skin) => skin.toLowerCase().includes(q))
-      .slice(0, 20);
+      .slice(0, 30);
 
     setFiltered(res);
   };
@@ -101,7 +118,7 @@ export default function Home() {
 
         <div style={{ display: "flex", gap: 10 }}>
           <input
-            placeholder="например: vulcan"
+            placeholder="например: lotus"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             style={{ flex: 1, padding: "10px" }}
@@ -141,9 +158,7 @@ export default function Home() {
                   {item.condition}
                   {item === cheapest && " 🔥 ЛУЧШАЯ"}
                 </span>
-                <span style={{
-                  color: item === cheapest ? "#4ade80" : "white"
-                }}>
+                <span style={{ color: item === cheapest ? "#4ade80" : "white" }}>
                   {item.price}
                 </span>
               </div>
@@ -151,11 +166,7 @@ export default function Home() {
               <a
                 href={item.link}
                 target="_blank"
-                style={{
-                  fontSize: "12px",
-                  color: "#aaa",
-                  textDecoration: "none"
-                }}
+                style={{ fontSize: "12px", color: "#aaa", textDecoration: "none" }}
               >
                 открыть в Steam
               </a>
