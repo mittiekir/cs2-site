@@ -1,54 +1,32 @@
-export const skins = [
-  // AK-47
-  "AK-47 | Redline",
-  "AK-47 | Asiimov",
-  "AK-47 | Neon Rider",
-  "AK-47 | Bloodsport",
-  "AK-47 | Vulcan",
-  "AK-47 | Fire Serpent",
+export async function GET() {
+  const extraSkins = [
+    "AK-47 | Wild Lotus",
+    "AK-47 | Vulcan",
+    "AK-47 | Fire Serpent",
+    "M4A4 | Howl",
+    "M4A1-S | Welcome to the Jungle",
+    "AWP | Dragon Lore",
+    "AWP | Gungnir",
+    "AWP | Medusa",
+    "Desert Eagle | Blaze"
+  ];
 
-  // AWP
-  "AWP | Asiimov",
-  "AWP | Dragon Lore",
-  "AWP | Hyper Beast",
-  "AWP | Lightning Strike",
-  "AWP | Mortis",
-  "AWP | Neo-Noir",
+  try {
+    const res = await fetch(
+      "https://bymykel.github.io/CSGO-API/api/en/skins.json",
+      { cache: "no-store" }
+    );
 
-  // M4A4
-  "M4A4 | Howl",
-  "M4A4 | Neo-Noir",
-  "M4A4 | Desolate Space",
-  "M4A4 | The Emperor",
+    const data = await res.json();
 
-  // M4A1-S
-  "M4A1-S | Printstream",
-  "M4A1-S | Golden Coil",
-  "M4A1-S | Hyper Beast",
-  "M4A1-S | Player Two",
+    const apiSkins = data
+      .map((item) => item.market_hash_name || item.name)
+      .filter(Boolean);
 
-  // Pistols
-  "USP-S | Kill Confirmed",
-  "USP-S | Cortex",
-  "USP-S | Printstream",
-  "Glock-18 | Fade",
-  "Glock-18 | Water Elemental",
-  "Desert Eagle | Blaze",
-  "Desert Eagle | Printstream",
-  "Desert Eagle | Code Red",
+    const allSkins = Array.from(new Set([...apiSkins, ...extraSkins]));
 
-  // SMG
-  "MP9 | Starlight Protector",
-  "MP7 | Bloodsport",
-  "P90 | Death by Kitty",
-  "P90 | Asiimov",
-
-  // Shotguns
-  "Nova | Hyper Beast",
-  "XM1014 | Entombed",
-
-  // Knives (пример)
-  "★ Karambit | Doppler",
-  "★ Butterfly Knife | Fade",
-  "★ M9 Bayonet | Crimson Web"
-];
+    return Response.json({ skins: allSkins });
+  } catch (err) {
+    return Response.json({ skins: extraSkins });
+  }
+}
