@@ -6,21 +6,16 @@ type PriceItem = {
   condition: string;
   price: string;
   priceNum: number;
-  link: string;
+  steamLink: string;
+  lisLink: string;
 };
 
 const extraSkins = [
   "AK-47 | Wild Lotus",
   "AK-47 | Vulcan",
   "AK-47 | Fire Serpent",
-  "AK-47 | Gold Arabesque",
-  "AK-47 | Case Hardened",
   "M4A4 | Howl",
-  "M4A1-S | Welcome to the Jungle",
-  "AWP | Dragon Lore",
-  "AWP | Gungnir",
-  "AWP | Medusa",
-  "Desert Eagle | Blaze"
+  "AWP | Dragon Lore"
 ];
 
 export default function Home() {
@@ -64,7 +59,7 @@ export default function Home() {
 
     const res = skins
       .filter((skin) => skin.toLowerCase().includes(q))
-      .slice(0, 30);
+      .slice(0, 20);
 
     setFiltered(res);
   };
@@ -85,14 +80,16 @@ export default function Home() {
           condition: cond,
           price: priceRaw || "нет данных",
           priceNum: priceRaw ? parseFloat(priceRaw.replace("$", "")) : Infinity,
-          link: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`
+          steamLink: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`,
+          lisLink: `https://lis-skins.com/market/csgo/?search=${encodeURIComponent(fullName)}`
         });
       } catch {
         items.push({
           condition: cond,
           price: "ошибка",
           priceNum: Infinity,
-          link: "#"
+          steamLink: "#",
+          lisLink: "#"
         });
       }
     }
@@ -113,12 +110,12 @@ export default function Home() {
       color: "white",
       fontFamily: "Arial"
     }}>
-      <div style={{ width: "500px", background: "#111", padding: "20px", borderRadius: "12px" }}>
+      <div style={{ width: "520px", background: "#111", padding: "20px", borderRadius: "12px" }}>
         <h1>CS2 Price Monitor</h1>
 
         <div style={{ display: "flex", gap: 10 }}>
           <input
-            placeholder="например: lotus"
+            placeholder="например: vulcan"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             style={{ flex: 1, padding: "10px" }}
@@ -150,29 +147,32 @@ export default function Home() {
               padding: "10px",
               background: item === cheapest ? "#133d2b" : "#1a1a1a",
               marginBottom: "8px",
-              borderRadius: "8px",
-              opacity: item.price === "нет данных" ? 0.6 : 1
+              borderRadius: "8px"
             }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>
                   {item.condition}
                   {item === cheapest && " 🔥 ЛУЧШАЯ"}
                 </span>
-                <span style={{ color: item === cheapest ? "#4ade80" : "white" }}>
+                <span style={{
+                  color: item === cheapest ? "#4ade80" : "white"
+                }}>
                   {item.price}
                 </span>
               </div>
 
-              <a
-                href={item.link}
-                target="_blank"
-                style={{ fontSize: "12px", color: "#aaa", textDecoration: "none" }}
-              >
-                открыть в Steam
-              </a>
+              <div style={{ marginTop: 5, display: "flex", gap: 10 }}>
+                <a href={item.steamLink} target="_blank" style={{ fontSize: "12px", color: "#aaa" }}>
+                  Steam
+                </a>
+                <a href={item.lisLink} target="_blank" style={{ fontSize: "12px", color: "#aaa" }}>
+                  Lis-Skins
+                </a>
+              </div>
             </div>
           ))}
         </div>
+
       </div>
     </main>
   );
