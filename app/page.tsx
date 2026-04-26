@@ -109,7 +109,13 @@ export default function Home() {
         let steamRub = "—";
 
         if (steamRaw) {
-          const num = parseFloat(steamRaw.replace("$", ""));
+          const num = parseFloat(
+            steamRaw
+              .replace("$", "")
+              .replace(",", "")
+              .trim()
+          );
+
           steamRub = `${Math.round(num * usdToRub)} ₽`;
         }
 
@@ -119,11 +125,12 @@ export default function Home() {
           const resSkinport = await fetch(
             `https://api.skinport.com/v1/items?app_id=730&market_hash_name=${encodeURIComponent(fullName)}`
           );
+
           const dataSkinport = await resSkinport.json();
 
           if (dataSkinport && dataSkinport.length > 0 && dataSkinport[0].min_price) {
             const price = dataSkinport[0].min_price / 100;
-            skinportPrice = `${price.toFixed(2)}$`;
+            skinportPrice = `$${price.toFixed(2)}`;
           }
         } catch {}
 
@@ -160,7 +167,12 @@ export default function Home() {
       color: "white",
       fontFamily: "Arial"
     }}>
-      <div style={{ width: "560px", background: "#111", padding: "20px", borderRadius: "12px" }}>
+      <div style={{
+        width: "560px",
+        background: "#111",
+        padding: "20px",
+        borderRadius: "12px"
+      }}>
         <h1>CS2 Price Monitor</h1>
 
         <div style={{ display: "flex", gap: 10 }}>
@@ -205,8 +217,8 @@ export default function Home() {
               marginBottom: "8px",
               borderRadius: "8px"
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{item.condition}</span>
+              <div style={{ fontWeight: "bold" }}>
+                {item.condition}
               </div>
 
               <div style={{ marginTop: 5 }}>
