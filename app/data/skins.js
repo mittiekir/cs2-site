@@ -1,18 +1,4 @@
 export async function GET() {
-  const extraSkins = [
-    "AK-47 | Wild Lotus",
-    "AK-47 | Vulcan",
-    "AK-47 | Fire Serpent",
-    "AK-47 | Gold Arabesque",
-    "AK-47 | Case Hardened",
-    "M4A4 | Howl",
-    "M4A1-S | Welcome to the Jungle",
-    "AWP | Dragon Lore",
-    "AWP | Gungnir",
-    "AWP | Medusa",
-    "Desert Eagle | Blaze"
-  ];
-
   try {
     const res = await fetch(
       "https://bymykel.github.io/CSGO-API/api/en/skins.json",
@@ -21,14 +7,15 @@ export async function GET() {
 
     const data = await res.json();
 
-    const apiSkins = data
-      .map((item) => item.market_hash_name || item.name)
-      .filter(Boolean);
+    const skins = data
+      .map((item) => ({
+        name: item.market_hash_name || item.name,
+        image: item.image
+      }))
+      .filter((item) => item.name && item.image);
 
-    const allSkins = Array.from(new Set([...extraSkins, ...apiSkins]));
-
-    return Response.json({ skins: allSkins });
-  } catch (err) {
-    return Response.json({ skins: extraSkins });
+    return Response.json({ skins });
+  } catch {
+    return Response.json({ skins: [] });
   }
 }
