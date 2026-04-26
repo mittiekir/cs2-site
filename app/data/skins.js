@@ -8,10 +8,20 @@ export async function GET() {
     const data = await res.json();
 
     const skins = data
-      .map((item) => ({
-        name: item.market_hash_name || item.name,
-        image: item.image
-      }))
+      .map((item) => {
+        const rawImage = item.image || item.icon_url || "";
+
+        let image = rawImage;
+
+        if (rawImage && !rawImage.startsWith("http")) {
+          image = `https://community.cloudflare.steamstatic.com/economy/image/${rawImage}`;
+        }
+
+        return {
+          name: item.market_hash_name || item.name,
+          image
+        };
+      })
       .filter((item) => item.name && item.image);
 
     return Response.json({ skins });
