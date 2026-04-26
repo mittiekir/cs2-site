@@ -31,6 +31,7 @@ export default function Home() {
   const [filtered, setFiltered] = useState<string[]>([]);
   const [selectedSkin, setSelectedSkin] = useState("");
   const [results, setResults] = useState<PriceItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const conditions = [
     "Factory New",
@@ -81,9 +82,11 @@ export default function Home() {
 
     setFiltered(found);
     setResults([]);
+    setSelectedSkin("");
   };
 
   const fetchPrices = async (skinName: string) => {
+    setLoading(true);
     setSelectedSkin(skinName);
     setFiltered([]);
 
@@ -110,10 +113,7 @@ export default function Home() {
 
         if (steamRaw) {
           const num = parseFloat(
-            steamRaw
-              .replace("$", "")
-              .replace(",", "")
-              .trim()
+            steamRaw.replace("$", "").replace(",", "").trim()
           );
 
           steamRub = `${Math.round(num * usdToRub)} ₽`;
@@ -155,84 +155,263 @@ export default function Home() {
     }
 
     setResults(items);
+    setLoading(false);
   };
 
   return (
     <main style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
       minHeight: "100vh",
-      background: "#0b0b0b",
+      background: "radial-gradient(circle at top, #1b2b22 0%, #080808 45%, #000 100%)",
       color: "white",
-      fontFamily: "Arial"
+      fontFamily: "Arial, sans-serif",
+      padding: "40px 16px"
     }}>
       <div style={{
-        width: "560px",
-        background: "#111",
-        padding: "20px",
-        borderRadius: "12px"
+        maxWidth: "900px",
+        margin: "0 auto"
       }}>
-        <h1>CS2 Price Monitor</h1>
+        <header style={{
+          marginBottom: "28px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "20px"
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: "36px",
+              margin: 0,
+              letterSpacing: "-1px"
+            }}>
+              CS2 Price Monitor
+            </h1>
+            <p style={{
+              color: "#aaa",
+              marginTop: "8px"
+            }}>
+              Поиск цен на скины CS2 в Steam, Lis-Skins и других маркетах
+            </p>
+          </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <input
-            placeholder="например: vulcan, lotus, redline"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ flex: 1, padding: "10px" }}
-          />
-          <button onClick={searchSkins}>Поиск</button>
-        </div>
+          <div style={{
+            padding: "10px 14px",
+            background: "#13251b",
+            color: "#4ade80",
+            borderRadius: "999px",
+            fontSize: "14px",
+            border: "1px solid #1f5133"
+          }}>
+            BETA
+          </div>
+        </header>
 
-        {selectedSkin && (
-          <p style={{ color: "#aaa", marginTop: 10 }}>
-            Выбран скин: {selectedSkin}
-          </p>
-        )}
-
-        <div style={{ marginTop: 15 }}>
-          {filtered.map((skin, i) => (
-            <div
-              key={i}
-              onClick={() => fetchPrices(skin)}
+        <section style={{
+          background: "rgba(17,17,17,0.9)",
+          border: "1px solid #242424",
+          borderRadius: "20px",
+          padding: "22px",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.45)"
+        }}>
+          <div style={{
+            display: "flex",
+            gap: "12px",
+            marginBottom: "16px"
+          }}>
+            <input
+              placeholder="Например: vulcan, lotus, redline"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") searchSkins();
+              }}
               style={{
-                padding: "10px",
-                background: "#1a1a1a",
-                marginBottom: "6px",
-                cursor: "pointer",
-                borderRadius: "8px"
+                flex: 1,
+                padding: "14px 16px",
+                borderRadius: "12px",
+                border: "1px solid #333",
+                background: "#0b0b0b",
+                color: "white",
+                outline: "none",
+                fontSize: "15px"
+              }}
+            />
+
+            <button
+              onClick={searchSkins}
+              style={{
+                padding: "14px 20px",
+                borderRadius: "12px",
+                border: "none",
+                background: "linear-gradient(135deg, #4ade80, #22c55e)",
+                color: "#06130b",
+                fontWeight: "bold",
+                cursor: "pointer"
               }}
             >
-              {skin}
-            </div>
-          ))}
-        </div>
+              Поиск
+            </button>
+          </div>
 
-        <div style={{ marginTop: 20 }}>
-          {results.map((item, i) => (
-            <div key={i} style={{
-              padding: "10px",
-              background: "#1a1a1a",
-              marginBottom: "8px",
-              borderRadius: "8px"
+          {selectedSkin && (
+            <div style={{
+              marginBottom: "18px",
+              padding: "12px 14px",
+              background: "#101c15",
+              border: "1px solid #1f5133",
+              borderRadius: "12px",
+              color: "#b7f7cc"
             }}>
-              <div style={{ fontWeight: "bold" }}>
-                {item.condition}
-              </div>
-
-              <div style={{ marginTop: 5 }}>
-                <div>Steam: {item.steamPrice} ({item.steamRub})</div>
-                <div>Skinport: {item.skinportPrice}</div>
-              </div>
-
-              <div style={{ marginTop: 5, display: "flex", gap: 10 }}>
-                <a href={item.linkSteam} target="_blank">Steam</a>
-                <a href={item.linkLis} target="_blank">Lis-Skins</a>
-              </div>
+              Выбран скин: <b>{selectedSkin}</b>
             </div>
-          ))}
-        </div>
+          )}
+
+          {filtered.length > 0 && (
+            <div style={{
+              display: "grid",
+              gap: "8px",
+              marginBottom: "20px"
+            }}>
+              {filtered.map((skin, i) => (
+                <button
+                  key={i}
+                  onClick={() => fetchPrices(skin)}
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 14px",
+                    background: "#181818",
+                    color: "white",
+                    border: "1px solid #292929",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    fontSize: "15px"
+                  }}
+                >
+                  {skin}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {loading && (
+            <div style={{
+              padding: "18px",
+              background: "#181818",
+              borderRadius: "14px",
+              color: "#aaa",
+              textAlign: "center"
+            }}>
+              Загружаю цены...
+            </div>
+          )}
+
+          <div style={{
+            display: "grid",
+            gap: "12px"
+          }}>
+            {results.map((item, i) => (
+              <div key={i} style={{
+                padding: "16px",
+                background: "#181818",
+                border: "1px solid #2a2a2a",
+                borderRadius: "16px"
+              }}>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "10px"
+                }}>
+                  <strong style={{ fontSize: "16px" }}>
+                    {item.condition}
+                  </strong>
+
+                  <span style={{
+                    fontSize: "13px",
+                    color: "#aaa"
+                  }}>
+                    CS2
+                  </span>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px"
+                }}>
+                  <div style={{
+                    padding: "12px",
+                    background: "#0d0d0d",
+                    borderRadius: "12px"
+                  }}>
+                    <div style={{ color: "#aaa", fontSize: "13px" }}>
+                      Steam
+                    </div>
+                    <div style={{ color: "#4ade80", fontWeight: "bold", marginTop: "4px" }}>
+                      {item.steamPrice}
+                    </div>
+                    <div style={{ color: "#ddd", fontSize: "14px" }}>
+                      {item.steamRub}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: "12px",
+                    background: "#0d0d0d",
+                    borderRadius: "12px"
+                  }}>
+                    <div style={{ color: "#aaa", fontSize: "13px" }}>
+                      Skinport
+                    </div>
+                    <div style={{ color: "#60a5fa", fontWeight: "bold", marginTop: "4px" }}>
+                      {item.skinportPrice}
+                    </div>
+                    <div style={{ color: "#777", fontSize: "14px" }}>
+                      маркет
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "12px"
+                }}>
+                  <a
+                    href={item.linkSteam}
+                    target="_blank"
+                    style={{
+                      flex: 1,
+                      textAlign: "center",
+                      padding: "10px",
+                      background: "#222",
+                      color: "white",
+                      borderRadius: "10px",
+                      textDecoration: "none"
+                    }}
+                  >
+                    Steam
+                  </a>
+
+                  <a
+                    href={item.linkLis}
+                    target="_blank"
+                    style={{
+                      flex: 1,
+                      textAlign: "center",
+                      padding: "10px",
+                      background: "#222",
+                      color: "white",
+                      borderRadius: "10px",
+                      textDecoration: "none"
+                    }}
+                  >
+                    Lis-Skins
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );
