@@ -3,6 +3,8 @@ export async function GET() {
     "AK-47 | Wild Lotus",
     "AK-47 | Vulcan",
     "AK-47 | Fire Serpent",
+    "AK-47 | Gold Arabesque",
+    "AK-47 | Case Hardened",
     "M4A4 | Howl",
     "M4A1-S | Welcome to the Jungle",
     "AWP | Dragon Lore",
@@ -23,7 +25,7 @@ export async function GET() {
       .map((item) => item.market_hash_name || item.name)
       .filter(Boolean);
 
-    const allSkins = Array.from(new Set([...apiSkins, ...extraSkins]));
+    const allSkins = Array.from(new Set([...extraSkins, ...apiSkins]));
 
     return Response.json({ skins: allSkins });
   } catch (err) {
