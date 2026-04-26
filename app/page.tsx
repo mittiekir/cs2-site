@@ -11,8 +11,25 @@ type PriceItem = {
   linkLis: string;
 };
 
+const extraSkins = [
+  "AK-47 | Wild Lotus",
+  "AK-47 | Vulcan",
+  "AK-47 | Fire Serpent",
+  "AK-47 | Gold Arabesque",
+  "AK-47 | Case Hardened",
+  "M4A4 | Howl",
+  "M4A1-S | Welcome to the Jungle",
+  "AWP | Dragon Lore",
+  "AWP | Gungnir",
+  "AWP | Medusa",
+  "Desert Eagle | Blaze"
+];
+
 export default function Home() {
   const [query, setQuery] = useState("");
+  const [allSkins, setAllSkins] = useState<string[]>([]);
+  const [filtered, setFiltered] = useState<string[]>([]);
+  const [selectedSkin, setSelectedSkin] = useState("");
   const [results, setResults] = useState<PriceItem[]>([]);
 
   const conditions = [
@@ -23,24 +40,65 @@ export default function Home() {
     "Battle-Scarred"
   ];
 
-  const fetchPrices = async () => {
-    if (!query) return;
+  const loadSkins = async () => {
+    try {
+      const res = await fetch("/api/skins");
+      const data = await res.json();
 
-    let usdToRub = 90;
+      const apiSkins: string[] = data.skins || [];
+      const merged = Array.from(new Set([...extraSkins, ...apiSkins]));
 
-    // 🔥 получаем актуальный курс
+      setAllSkins(merged);
+      return merged;
+    } catch {
+      setAllSkins(extraSkins);
+      return extraSkins;
+    }
+  };
+
+  const searchSkins = async () => {
+    let skins = allSkins;
+
+    if (skins.length === 0) {
+      skins = await loadSkins();
+    }
+
+    const q = query.toLowerCase().trim();
+
+    if (!q) {
+      setFiltered([]);
+      return;
+    }
+
+    const words = q.split(" ").filter(Boolean);
+
+    const found = skins
+      .filter((skin) => {
+        const name = skin.toLowerCase();
+        return words.every((word) => name.includes(word));
+      })
+      .slice(0, 30);
+
+    setFiltered(found);
+    setResults([]);
+  };
+
+  const fetchPrices = async (skinName: string) => {
+    setSelectedSkin(skinName);
+    setFiltered([]);
+
+    let usdToRub = 75;
+
     try {
       const rateRes = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
       const rateData = await rateRes.json();
-      usdToRub = rateData.rates.RUB;
-    } catch {
-      console.log("курс не загрузился");
-    }
+      usdToRub = rateData.rates.RUB || 75;
+    } catch {}
 
     const items: PriceItem[] = [];
 
     for (const cond of conditions) {
-      const fullName = `${query} (${cond})`;
+      const fullName = `${skinName} (${cond})`;
 
       try {
         const resSteam = await fetch(`/api/price?name=${encodeURIComponent(fullName)}`);
@@ -55,7 +113,6 @@ export default function Home() {
           steamRub = `${Math.round(num * usdToRub)} ₽`;
         }
 
-        // Skinport
         let skinportPrice = "—";
 
         try {
@@ -64,7 +121,7 @@ export default function Home() {
           );
           const dataSkinport = await resSkinport.json();
 
-          if (dataSkinport && dataSkinport.length > 0) {
+          if (dataSkinport && dataSkinport.length > 0 && dataSkinport[0].min_price) {
             const price = dataSkinport[0].min_price / 100;
             skinportPrice = `${price.toFixed(2)}$`;
           }
@@ -78,7 +135,6 @@ export default function Home() {
           linkSteam: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`,
           linkLis: `https://lis-skins.com/ru/market/csgo/?q=${encodeURIComponent(fullName)}`
         });
-
       } catch {
         items.push({
           condition: cond,
@@ -104,18 +160,42 @@ export default function Home() {
       color: "white",
       fontFamily: "Arial"
     }}>
-      <div style={{ width: "540px", background: "#111", padding: "20px", borderRadius: "12px" }}>
-        
+      <div style={{ width: "560px", background: "#111", padding: "20px", borderRadius: "12px" }}>
         <h1>CS2 Price Monitor</h1>
 
-        <input
-          placeholder="AK-47 | Vulcan"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-        />
+        <div style={{ display: "flex", gap: 10 }}>
+          <input
+            placeholder="например: vulcan, lotus, redline"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{ flex: 1, padding: "10px" }}
+          />
+          <button onClick={searchSkins}>Поиск</button>
+        </div>
 
-        <button onClick={fetchPrices}>Найти</button>
+        {selectedSkin && (
+          <p style={{ color: "#aaa", marginTop: 10 }}>
+            Выбран скин: {selectedSkin}
+          </p>
+        )}
+
+        <div style={{ marginTop: 15 }}>
+          {filtered.map((skin, i) => (
+            <div
+              key={i}
+              onClick={() => fetchPrices(skin)}
+              style={{
+                padding: "10px",
+                background: "#1a1a1a",
+                marginBottom: "6px",
+                cursor: "pointer",
+                borderRadius: "8px"
+              }}
+            >
+              {skin}
+            </div>
+          ))}
+        </div>
 
         <div style={{ marginTop: 20 }}>
           {results.map((item, i) => (
@@ -141,7 +221,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
       </div>
     </main>
   );
