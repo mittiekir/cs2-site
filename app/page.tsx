@@ -2,11 +2,18 @@
 
 import { useState } from "react";
 
+type PriceItem = {
+  condition: string;
+  price: string;
+  priceNum: number;
+  link: string;
+};
+
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [allSkins, setAllSkins] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [results, setResults] = useState([]);
+  const [allSkins, setAllSkins] = useState<string[]>([]);
+  const [filtered, setFiltered] = useState<string[]>([]);
+  const [results, setResults] = useState<PriceItem[]>([]);
 
   const conditions = [
     "Factory New",
@@ -20,8 +27,10 @@ export default function Home() {
     try {
       const res = await fetch("/api/skins");
       const data = await res.json();
-      setAllSkins(data.skins || []);
-      return data.skins || [];
+
+      const skins: string[] = data.skins || [];
+      setAllSkins(skins);
+      return skins;
     } catch {
       return [];
     }
@@ -37,16 +46,16 @@ export default function Home() {
     const q = query.toLowerCase().trim();
 
     const res = skins
-      .filter(skin => skin.toLowerCase().includes(q))
+      .filter((skin) => skin.toLowerCase().includes(q))
       .slice(0, 20);
 
     setFiltered(res);
   };
 
-  const fetchPrices = async (skinName) => {
-    let items = [];
+  const fetchPrices = async (skinName: string) => {
+    const items: PriceItem[] = [];
 
-    for (let cond of conditions) {
+    for (const cond of conditions) {
       const fullName = `${skinName} (${cond})`;
 
       try {
@@ -75,7 +84,7 @@ export default function Home() {
     setResults(items);
   };
 
-  const cheapest = results.find(r => r.priceNum !== Infinity);
+  const cheapest = results.find((r) => r.priceNum !== Infinity);
 
   return (
     <main style={{
@@ -88,7 +97,6 @@ export default function Home() {
       fontFamily: "Arial"
     }}>
       <div style={{ width: "500px", background: "#111", padding: "20px", borderRadius: "12px" }}>
-        
         <h1>CS2 Price Monitor</h1>
 
         <div style={{ display: "flex", gap: 10 }}>
@@ -101,7 +109,6 @@ export default function Home() {
           <button onClick={searchSkins}>Поиск</button>
         </div>
 
-        {/* список */}
         <div style={{ marginTop: 15 }}>
           {filtered.map((skin, i) => (
             <div
@@ -120,7 +127,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* цены */}
         <div style={{ marginTop: 20 }}>
           {results.map((item, i) => (
             <div key={i} style={{
@@ -156,7 +162,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
       </div>
     </main>
   );
