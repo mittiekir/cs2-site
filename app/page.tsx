@@ -10,21 +10,12 @@ type PriceItem = {
   condition: string;
   steamPrice: string;
   steamRub: string;
+  skinportPrice: string;
   linkSteam: string;
   linkLis: string;
+  linkDmarket: string;
+  linkCsfloat: string;
 };
-
-const fallbackSkins: Skin[] = [
-  { name: "AK-47 | Vulcan" },
-  { name: "AK-47 | Wild Lotus" },
-  { name: "AK-47 | Redline" },
-  { name: "AK-47 | Asiimov" },
-  { name: "M4A4 | Howl" },
-  { name: "AWP | Dragon Lore" },
-  { name: "AWP | Asiimov" },
-  { name: "M4A1-S | Printstream" },
-  { name: "Desert Eagle | Blaze" }
-];
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -43,24 +34,12 @@ export default function Home() {
   ];
 
   const loadSkins = async () => {
-    try {
-      const res = await fetch("/api/skins");
-      const data = await res.json();
+    const res = await fetch("/api/skins");
+    const data = await res.json();
+    const skins: Skin[] = data.skins || [];
 
-      const apiSkins: Skin[] = Array.isArray(data.skins)
-        ? data.skins.map((item: any) => ({
-            name: typeof item === "string" ? item : item.name
-          })).filter((item: Skin) => item.name)
-        : [];
-
-      const merged = [...fallbackSkins, ...apiSkins];
-
-      setAllSkins(merged);
-      return merged;
-    } catch {
-      setAllSkins(fallbackSkins);
-      return fallbackSkins;
-    }
+    setAllSkins(skins);
+    return skins;
   };
 
   const searchSkins = async () => {
@@ -76,10 +55,9 @@ export default function Home() {
     const words = q.split(" ").filter(Boolean);
 
     const found = skins
-      .filter((skin) => {
-        const name = skin.name.toLowerCase();
-        return words.every((word) => name.includes(word));
-      })
+      .filter((skin) =>
+        words.every((word) => skin.name.toLowerCase().includes(word))
+      )
       .slice(0, 30);
 
     setFiltered(found);
@@ -105,35 +83,46 @@ export default function Home() {
     for (const cond of conditions) {
       const fullName = `${skin.name} (${cond})`;
 
+      let steamPrice = "нет данных";
+      let steamRub = "—";
+      let skinportPrice = "—";
+
       try {
-        const res = await fetch(`/api/price?name=${encodeURIComponent(fullName)}`);
-        const data = await res.json();
+        const resSteam = await fetch(`/api/price?name=${encodeURIComponent(fullName)}`);
+        const dataSteam = await resSteam.json();
 
-        const priceRaw = data.lowest_price || data.median_price;
-
-        let steamRub = "—";
+        const priceRaw = dataSteam.lowest_price || dataSteam.median_price;
 
         if (priceRaw) {
-          const num = parseFloat(priceRaw.replace("$", "").replace(",", "").trim());
+          steamPrice = priceRaw;
+
+          const num = parseFloat(
+            priceRaw.replace("$", "").replace(",", "").trim()
+          );
+
           steamRub = `${Math.round(num * usdToRub)} ₽`;
         }
+      } catch {}
 
-        items.push({
-          condition: cond,
-          steamPrice: priceRaw || "нет данных",
-          steamRub,
-          linkSteam: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`,
-          linkLis: `https://lis-skins.com/ru/market/csgo/?q=${encodeURIComponent(fullName)}`
-        });
-      } catch {
-        items.push({
-          condition: cond,
-          steamPrice: "ошибка",
-          steamRub: "—",
-          linkSteam: "#",
-          linkLis: "#"
-        });
-      }
+      try {
+        const resSkinport = await fetch(`/api/skinport?name=${encodeURIComponent(fullName)}`);
+        const dataSkinport = await resSkinport.json();
+
+        if (dataSkinport.success && dataSkinport.price) {
+          skinportPrice = dataSkinport.price;
+        }
+      } catch {}
+
+      items.push({
+        condition: cond,
+        steamPrice,
+        steamRub,
+        skinportPrice,
+        linkSteam: `https://steamcommunity.com/market/listings/730/${encodeURIComponent(fullName)}`,
+        linkLis: `https://lis-skins.com/ru/market/csgo/?q=${encodeURIComponent(fullName)}`,
+        linkDmarket: `https://dmarket.com/ingame-items/item-list/csgo-skins?title=${encodeURIComponent(fullName)}`,
+        linkCsfloat: `https://csfloat.com/search?market_hash_name=${encodeURIComponent(fullName)}`
+      });
     }
 
     setResults(items);
@@ -150,7 +139,9 @@ export default function Home() {
     }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <h1 style={{ fontSize: 38, marginBottom: 8 }}>CS2 Price Monitor</h1>
-        <p style={{ color: "#aaa", marginBottom: 24 }}>Поиск цен на скины CS2</p>
+        <p style={{ color: "#aaa", marginBottom: 24 }}>
+          Steam + Skinport + ссылки на другие маркеты
+        </p>
 
         <div style={{
           background: "#111",
@@ -230,14 +221,26 @@ export default function Home() {
                 background: "#181818",
                 padding: 16,
                 borderRadius: 16,
-                marginBottom: 10
+                marginBottom: 10,
+                border: "1px solid #2a2a2a"
               }}>
                 <b>{item.condition}</b>
-                <div>Steam: {item.steamPrice} ({item.steamRub})</div>
 
-                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <a href={item.linkSteam} target="_blank">Steam</a>
-                  <a href={item.linkLis} target="_blank">Lis-Skins</a>
+                <div style={{ marginTop: 8 }}>
+                  <div>Steam: {item.steamPrice} ({item.steamRub})</div>
+                  <div>Skinport: {item.skinportPrice}</div>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: 8,
+                  marginTop: 12
+                }}>
+                  <a href={item.linkSteam} target="_blank" style={linkStyle}>Steam</a>
+                  <a href={item.linkLis} target="_blank" style={linkStyle}>Lis-Skins</a>
+                  <a href={item.linkDmarket} target="_blank" style={linkStyle}>DMarket</a>
+                  <a href={item.linkCsfloat} target="_blank" style={linkStyle}>CSFloat</a>
                 </div>
               </div>
             ))}
@@ -247,3 +250,13 @@ export default function Home() {
     </main>
   );
 }
+
+const linkStyle = {
+  textAlign: "center" as const,
+  padding: "10px",
+  background: "#242424",
+  color: "white",
+  borderRadius: 10,
+  textDecoration: "none",
+  fontSize: 14
+};
