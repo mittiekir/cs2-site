@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 
-type Skin = {
-  name: string;
-};
+type Skin = { name: string };
 
 type PriceItem = {
   condition: string;
@@ -25,39 +23,57 @@ export default function Home() {
   const [results, setResults] = useState<PriceItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const conditions = [
-    "Factory New",
-    "Minimal Wear",
-    "Field-Tested",
-    "Well-Worn",
-    "Battle-Scarred"
+  const fallbackSkins: Skin[] = [
+    { name: "AK-47 | Vulcan" },
+    { name: "AK-47 | Wild Lotus" },
+    { name: "AK-47 | Redline" },
+    { name: "AK-47 | Asiimov" },
+    { name: "M4A4 | Howl" },
+    { name: "AWP | Dragon Lore" },
+    { name: "AWP | Asiimov" },
+    { name: "M4A1-S | Printstream" },
+    { name: "Desert Eagle | Blaze" }
   ];
 
-  const loadSkins = async () => {
-    const res = await fetch("/api/skins");
-    const data = await res.json();
-    const skins: Skin[] = data.skins || [];
+  const conditions = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"];
 
-    setAllSkins(skins);
-    return skins;
+  const removeDuplicates = (skins: Skin[]) => {
+    const map = new Map<string, Skin>();
+
+    skins.forEach((skin) => {
+      const key = skin.name.toLowerCase().trim();
+      if (!map.has(key)) map.set(key, skin);
+    });
+
+    return Array.from(map.values());
+  };
+
+  const loadSkins = async () => {
+    try {
+      const res = await fetch("/api/skins");
+      const data = await res.json();
+      const apiSkins: Skin[] = data.skins || [];
+
+      const merged = removeDuplicates([...fallbackSkins, ...apiSkins]);
+
+      setAllSkins(merged);
+      return merged;
+    } catch {
+      setAllSkins(fallbackSkins);
+      return fallbackSkins;
+    }
   };
 
   const searchSkins = async () => {
-    let skins = allSkins;
-
-    if (skins.length === 0) {
-      skins = await loadSkins();
-    }
+    let skins = allSkins.length ? allSkins : await loadSkins();
 
     const q = query.toLowerCase().trim();
     if (!q) return;
 
     const words = q.split(" ").filter(Boolean);
 
-    const found = skins
-      .filter((skin) =>
-        words.every((word) => skin.name.toLowerCase().includes(word))
-      )
+    const found = removeDuplicates(skins)
+      .filter((skin) => words.every((word) => skin.name.toLowerCase().includes(word)))
       .slice(0, 30);
 
     setFiltered(found);
@@ -90,16 +106,11 @@ export default function Home() {
       try {
         const resSteam = await fetch(`/api/price?name=${encodeURIComponent(fullName)}`);
         const dataSteam = await resSteam.json();
-
         const priceRaw = dataSteam.lowest_price || dataSteam.median_price;
 
         if (priceRaw) {
           steamPrice = priceRaw;
-
-          const num = parseFloat(
-            priceRaw.replace("$", "").replace(",", "").trim()
-          );
-
+          const num = parseFloat(priceRaw.replace("$", "").replace(",", "").trim());
           steamRub = `${Math.round(num * usdToRub)} ₽`;
         }
       } catch {}
@@ -130,85 +141,36 @@ export default function Home() {
   };
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: "radial-gradient(circle at top, #16351f, #050505 45%, #000)",
-      color: "white",
-      fontFamily: "Arial, sans-serif",
-      padding: "36px 16px"
-    }}>
+    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at top, #16351f, #050505 45%, #000)", color: "white", fontFamily: "Arial, sans-serif", padding: "36px 16px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <h1 style={{ fontSize: 38, marginBottom: 8 }}>CS2 Price Monitor</h1>
-        <p style={{ color: "#aaa", marginBottom: 24 }}>
-          Steam + Skinport + ссылки на другие маркеты
-        </p>
+        <p style={{ color: "#aaa", marginBottom: 24 }}>Steam + Skinport + ссылки на другие маркеты</p>
 
-        <div style={{
-          background: "#111",
-          border: "1px solid #222",
-          borderRadius: 20,
-          padding: 22
-        }}>
+        <div style={{ background: "#111", border: "1px solid #222", borderRadius: 20, padding: 22 }}>
           <div style={{ display: "flex", gap: 12 }}>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && searchSkins()}
               placeholder="vulcan, lotus, redline"
-              style={{
-                flex: 1,
-                padding: 14,
-                borderRadius: 12,
-                background: "#080808",
-                color: "white",
-                border: "1px solid #333"
-              }}
+              style={{ flex: 1, padding: 14, borderRadius: 12, background: "#080808", color: "white", border: "1px solid #333" }}
             />
 
-            <button
-              onClick={searchSkins}
-              style={{
-                padding: "14px 22px",
-                borderRadius: 12,
-                border: "none",
-                background: "#4ade80",
-                fontWeight: "bold",
-                cursor: "pointer"
-              }}
-            >
+            <button onClick={searchSkins} style={{ padding: "14px 22px", borderRadius: 12, border: "none", background: "#4ade80", fontWeight: "bold", cursor: "pointer" }}>
               Поиск
             </button>
           </div>
 
           <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
             {filtered.map((skin, i) => (
-              <button
-                key={i}
-                onClick={() => fetchPrices(skin)}
-                style={{
-                  textAlign: "left",
-                  background: "#181818",
-                  border: "1px solid #2a2a2a",
-                  borderRadius: 14,
-                  padding: 16,
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: "bold"
-                }}
-              >
+              <button key={i} onClick={() => fetchPrices(skin)} style={{ textAlign: "left", background: "#181818", border: "1px solid #2a2a2a", borderRadius: 14, padding: 16, color: "white", cursor: "pointer", fontWeight: "bold" }}>
                 {skin.name}
               </button>
             ))}
           </div>
 
           {selectedSkin && (
-            <div style={{
-              marginTop: 24,
-              padding: 16,
-              background: "#101c15",
-              border: "1px solid #1f5133",
-              borderRadius: 16
-            }}>
+            <div style={{ marginTop: 24, padding: 16, background: "#101c15", border: "1px solid #1f5133", borderRadius: 16 }}>
               Выбран скин: <b>{selectedSkin.name}</b>
             </div>
           )}
@@ -217,13 +179,7 @@ export default function Home() {
 
           <div style={{ marginTop: 20 }}>
             {results.map((item, i) => (
-              <div key={i} style={{
-                background: "#181818",
-                padding: 16,
-                borderRadius: 16,
-                marginBottom: 10,
-                border: "1px solid #2a2a2a"
-              }}>
+              <div key={i} style={{ background: "#181818", padding: 16, borderRadius: 16, marginBottom: 10, border: "1px solid #2a2a2a" }}>
                 <b>{item.condition}</b>
 
                 <div style={{ marginTop: 8 }}>
@@ -231,12 +187,7 @@ export default function Home() {
                   <div>Skinport: {item.skinportPrice}</div>
                 </div>
 
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: 8,
-                  marginTop: 12
-                }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 12 }}>
                   <a href={item.linkSteam} target="_blank" style={linkStyle}>Steam</a>
                   <a href={item.linkLis} target="_blank" style={linkStyle}>Lis-Skins</a>
                   <a href={item.linkDmarket} target="_blank" style={linkStyle}>DMarket</a>
